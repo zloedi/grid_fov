@@ -38,24 +38,16 @@ void MainLoop( void *arg ) {
     int *quit = arg;
     SDL_Event event;
     while ( SDL_PollEvent( &event ) ) {
-        //int code = event.key.keysym.sym;
         switch( event.type ) {
 			case SDL_MOUSEMOTION:
 				x_mouseX = event.motion.x;
                 x_mouseY = event.motion.y;
 				break;
 
-            case SDL_MOUSEBUTTONDOWN:
-                //ZH_UI_OnMouseButton( 1 );
-                break;
-
-            case SDL_MOUSEBUTTONUP:
-                //ZH_UI_OnMouseButton( 0 );
-                break;
-
             case SDL_QUIT:
                 *quit = 1;
                 break;
+
             default:
                 break;
         }
