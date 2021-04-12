@@ -1,0 +1,8 @@
+index.js
+index.wasm
+*.swp
+*.swo
+*.exe
+tags
+demo
+vim_session_*
