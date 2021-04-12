@@ -20,14 +20,6 @@ static unsigned char x_maze[MAZE_W * MAZE_H];
 static unsigned char x_fov[MAZE_W * MAZE_H];
 static SDL_Texture *x_mazeTex;
 
-//static inline int Mini( int a, int b ) {
-//    return a < b ? a : b;
-//}
-//
-//static inline int Maxi( int a, int b ) {
-//    return a > b ? a : b;
-//}
-
 static void RasterizeRectangle( int rx, int ry, int rw, int rh, int color,
                                                         int mazeW, int mazeH, 
                                                         unsigned char *maze ) {
@@ -70,11 +62,6 @@ void MainLoop( void *arg ) {
     }
     SDL_SetRenderDrawColor( x_renderer, 40, 40, 40, 255 );
     SDL_RenderClear( x_renderer );
-    //ZH_UI_Begin( x_mouseX, x_mouseY );
-    //if ( ZH_UI_ClickRect( 10, 10, 50, 20 ) == UIBR_RELEASED ) {
-    //    QON_Print( "Clicked\n" );
-    //}
-    //ZH_UI_End();
 
     // == rasterize Field of View ==
 
