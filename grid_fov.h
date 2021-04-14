@@ -140,15 +140,12 @@ void RasterizeFOVOctant( int originX, int originY,
             int i2 = column << 1;
 
             // the rays list is recycled between the columns
-            // we recreate the rays list on each new column
+            // we recreate the rays list on each column
             raysList_t *currRays = &rayLists[( column + 0 ) & 1];
             raysList_t *nextRays = &rayLists[( column + 1 ) & 1];
             nextRays->numRays = 0;
 
             for ( int r = 0; r < currRays->numRays - 1; r += 2 ) {
-
-                // == light up a chunk of pixels inside a frustum ==
-
                 // a pair of rays defining a frustum
                 // if a pixel has a center INSIDE this frustum -- it's lit
                 c2_t ray0 = currRays->rays[r + 0];
@@ -159,71 +156,19 @@ void RasterizeFOVOctant( int originX, int originY,
                 // the Y coordinate of the intersection of the TOP ray with the CURRENT column
                 int outyr0 = ( i2 + 1 ) * ray0.y / ray0.x;
 
-                int starty;
-
-                //printf ( "%d %d\n", ray0.x, ray0.y );
-                //printf ( "%d %d\n", c2xy( i2 + 1, outyr0 ).x, c2xy( i2 + 1, outyr0 ).y );
-                //printf ( "%d\n", c2Cross( ray0, c2xy( i2 + 1, outyr0 ) ) );
-
-                //if ( c2Cross( c2xy( i2 + 1, outyr0 ), c2xy( i2, outyr0 ) ) < 0 ) {
-                //    // never happens
-                //    exit( -1 );
-                //}
-
-                //if ( c2Cross( c2xy( i2 + 1, outyr0 ), c2xy( i2, outyr0 ) ) < 0 ) {
-                //    starty = outyr0 + 2;
-                //} else {
-                    // ceil it
-                    starty = outyr0 + 1;
-                //}
-                starty >>= 1;
-
-#if 0
-                // the Y coordinate of the intersection of the BOTTOM ray with the PREVIOUS column
-                int inyr1 = ( i2 - 1 ) * ray1.y / ray1.x;
-                int endy;
-                if ( c2Cross( c2xy( i2 - 1, inyr1 ), c2xy( i2, inyr1 + 1 ) ) > 0 ) {
-                    endy = inyr1;
-                } else {
-                    if ( c2Cross( c2xy( i2 - 1, inyr1 ), c2xy( i2, inyr1 + 1 ) ) < 0 ) {
-                        // never happens
-                        exit ( -1 );
-                    }
-                    endy = inyr1 + 1;
-                }
-                endy >>= 1;
-#endif
-
                 // the Y coordinate of the intersection of the BOTTOM ray with the PREVIOUS column
                 int inyr1 = ( i2 - 1 ) * ray1.y / ray1.x;
                 // the Y coordinate of the intersection of the BOTTOM ray with the CURRENT column
                 int outyr1 = ( i2 + 1 ) * ray1.y / ray1.x;
 
-
-                int endy;
-
-                //int cross = ( i2 - 1 ) * ( inyr1 + 1 ) - inyr1 * i2;
-
-                //if ( cross > 0 ) {
-                //    endy = inyr1;
-                //} else {
-                    //endy = inyr1 - 1;
-                    // floor it
-                    endy = outyr1 - 1;
-                //}
-
-                //if ( c2Cross( c2xy( i2 - 1, inyr1 ), c2xy( i2, inyr1 + 1 ) ) > 0 ) {
-                //    endy = inyr1;
-                //} else {
-                //    if ( c2Cross( c2xy( i2 - 1, inyr1 ), c2xy( i2, inyr1 + 1 ) ) < 0 ) {
-                //        // never happens
-                //        exit ( -1 );
-                //    }
-                //    endy = inyr1 - 1;// + 1;
-                //}
-                endy >>= 1;
+                // == light up a chunk of pixels inside a frustum ==
 
                 {
+                    // ceil
+                    int starty = ( outyr0 + 1 ) >> 1;
+                    // floor
+                    int endy = ( outyr1 - 1 ) >> 1;
+
                     int y;
                     c2_t p;
                     int miny = starty;
@@ -235,14 +180,7 @@ void RasterizeFOVOctant( int originX, int originY,
                     }
                 }
 
-                // push rays for the next column
-
-                // correct the bounding rays first
-
-                //outyr0 = ( i2 + 1 ) * ray0.y / ray0.x;
-                //inyr1 = ( i2 - 1 ) * ray1.y / ray1.x;
-
-                //int inyr0 = ( i2 - 1 ) * ray0.y / ray0.x;
+                // == correct the rays ==
 
                 c2_t bounds0;
                 c2_t bounds1;
@@ -264,7 +202,6 @@ void RasterizeFOVOctant( int originX, int originY,
                         WRITE_PIXEL( p, 255 );
                     }
                     bounds0 = c2xy( i2 - 1, y - 1 );
-                    //inyr0 = ( i2 - 1 ) * bounds0.y / bounds0.x;
                     outyr0 = ( i2 + 1 ) * bounds0.y / bounds0.x;
                 }
                 c2_t lastin = c2Add( ci, c2Scale( e1, ( inyr1 + 1 ) / 2 ) );
@@ -286,7 +223,6 @@ void RasterizeFOVOctant( int originX, int originY,
                     }
                     bounds1 = c2xy( i2 + 1, y + 1 );
                     inyr1 = ( i2 - 1 ) * bounds1.y / bounds1.x;
-                    //outyr1 = ( i2 + 1 ) * bounds1.y / bounds1.x;
                 }
 
                 // the bounding rays form a zero-area frustum -- quit
@@ -294,7 +230,8 @@ void RasterizeFOVOctant( int originX, int originY,
                     continue;
                 }
 
-                // push actual rays
+                // == push actual rays ==
+
                 {
                     // push top ray (may be an old one)
                     ADD_RAY( bounds0 );
