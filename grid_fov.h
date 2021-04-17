@@ -136,7 +136,7 @@ void RasterizeFOVOctant( int originX, int originY,
         c2_t ci;
         for ( column = 0, ci = origin; column <= limitX; 
                                             column++, ci = c2Add( ci, e0 ) ) {
-            // work in half-pixel units so we can step on pixel centers
+            // work in half-pixel units
             int i2 = column << 1;
 
             // the rays list is recycled between the columns
@@ -147,7 +147,6 @@ void RasterizeFOVOctant( int originX, int originY,
 
             for ( int r = 0; r < currRays->numRays - 1; r += 2 ) {
                 // a pair of rays defining a frustum
-                // if a pixel has a center INSIDE this frustum -- it's lit
                 c2_t ray0 = currRays->rays[r + 0];
                 c2_t ray1 = currRays->rays[r + 1];
 
@@ -161,13 +160,11 @@ void RasterizeFOVOctant( int originX, int originY,
                 // the Y coordinate of the intersection of the BOTTOM ray with the CURRENT column
                 int outyr1 = ( i2 + 1 ) * ray1.y / ray1.x;
 
-                // == light up a chunk of pixels inside a frustum ==
+                // == light up a chunk of pixels inside the frustum ==
 
                 {
-                    // ceil
                     int starty = ( outyr0 + 1 ) >> 1;
-                    // floor
-                    int endy = ( outyr1 - 1 ) >> 1;
+                    int endy = ( ( outyr1 + 1 ) >> 1 ) - 1;
 
                     int y;
                     c2_t p;
@@ -180,61 +177,82 @@ void RasterizeFOVOctant( int originX, int originY,
                     }
                 }
 
-                // == correct the rays ==
+                // == push closer the rays if they hit solid pixels ==
 
-                c2_t bounds0;
-                c2_t bounds1;
-                c2_t firstin = c2Add( ci, c2Scale( e1, ( inyr0 + 1 ) / 2 ) );
-                c2_t firstout = c2Add( ci, c2Scale( e1, ( outyr0 + 1 ) / 2 ) );
-                if ( ( IS_ON_MAP( firstin ) && ! READ_PIXEL( firstin ) )
-                    && ( IS_ON_MAP( firstout ) && ! READ_PIXEL( firstout ) ) ) {
-                      bounds0 = ray0;
-                } else {
-                    int top = ( outyr0 + 1 ) / 2;
-                    int bottom = Mini( ( inyr1 + 1 ) / 2, limitY );
-                    int y;
-                    c2_t p = c2Add( ci, c2Scale( e1, top ) );
-                    for ( y = top * 2; y <= bottom * 2; y += 2, p = c2Add( p, e1 ) ) {
-                        if ( ! READ_PIXEL( p ) ) {
-                            break;
+                c2_t newRay0;
+                c2_t newRay1;
+
+                {
+                    // if nothing is blocking the top ray, keep it
+                    int iny = Mini( ( inyr0 + 1 ) >> 1, limitY );
+                    int outy = Mini( ( outyr0 + 1 ) >> 1, limitY );
+                    c2_t in = c2Add( ci, c2Scale( e1, iny ) );
+                    c2_t out = c2Add( ci, c2Scale( e1, outy ) );
+                    if ( ! READ_PIXEL( in ) && ! READ_PIXEL( out ) ) {
+                          newRay0 = ray0;
+                    } 
+
+                    // if blocked, walk along the solid pixels toward the 
+                    // bottom ray until we find a hole, then fix the ray there
+                    else {
+                        int top = outy;
+                        int bottom = Mini( ( inyr1 + 1 ) >> 1, limitY );
+                        int y;
+                        c2_t p = c2Add( ci, c2Scale( e1, top ) );
+                        for ( y = top * 2; y <= bottom * 2; 
+                                                y += 2, p = c2Add( p, e1 ) ) {
+                            if ( ! READ_PIXEL( p ) ) {
+                                break;
+                            }
+                            // pixels that push rays closer are lit too
+                            WRITE_PIXEL( p, 255 );
                         }
-                        // pixels that force ray corrections are lit too
-                        WRITE_PIXEL( p, 255 );
+                        newRay0 = c2xy( i2 - 1, y - 1 );
+                        outyr0 = ( i2 + 1 ) * newRay0.y / newRay0.x;
+
+                        // the bounding rays form a zero-area frustum
+                        // stop processing this ray pair
+                        if ( c2Cross( newRay0, ray1 ) <= 0 ) {
+                            continue;
+                        }
                     }
-                    bounds0 = c2xy( i2 - 1, y - 1 );
-                    outyr0 = ( i2 + 1 ) * bounds0.y / bounds0.x;
                 }
+
                 c2_t lastin = c2Add( ci, c2Scale( e1, ( inyr1 + 1 ) / 2 ) );
                 c2_t lastout = c2Add( ci, c2Scale( e1, ( outyr1 + 1 ) / 2 ) );
                 if ( ( IS_ON_MAP( lastin ) && ! READ_PIXEL( lastin ) )
                     && ( IS_ON_MAP( lastout ) && ! READ_PIXEL( lastout ) ) ) {
-                    bounds1 = ray1;
+                    newRay1 = ray1;
                 } else {
-                    int top = ( outyr0 + 1 ) / 2;
-                    int bottom = Mini( ( inyr1 + 1 ) / 2, limitY );
+                    int top = ( outyr0 + 1 ) >> 1;
+                    // the pixel below the initial bottom ray always gets lit
+                    // don't bother
+                    int bottom = Mini( ( inyr1 + 1 ) >> 1, limitY );
+
                     int y;
                     c2_t p = c2Add( ci, c2Scale( e1, bottom ) );
                     for ( y = bottom * 2; y >= top * 2; y -= 2, p = c2Sub( p, e1 ) ) {
                         if ( ! READ_PIXEL( p ) ) {
                             break;
                         }
-                        // pixels that force ray corrections are lit too
+                        // pixels that push rays closer are lit too
                         WRITE_PIXEL( p, 255 );
                     }
-                    bounds1 = c2xy( i2 + 1, y + 1 );
-                    inyr1 = ( i2 - 1 ) * bounds1.y / bounds1.x;
+                    newRay1 = c2xy( i2 + 1, y + 1 );
+                    inyr1 = ( i2 - 1 ) * newRay1.y / newRay1.x;
+
+                    // the bounding rays form a zero-area frustum
+                    // stop processing this ray pair
+                    if ( c2Cross( newRay0, newRay1 ) <= 0 ) {
+                        continue;
+                    }
                 }
 
-                // the bounding rays form a zero-area frustum -- quit
-                if ( c2Cross( bounds0, bounds1 ) <= 0 ) {
-                    continue;
-                }
-
-                // == push actual rays ==
+                // == collect any valid rays for the next column ==
 
                 {
-                    // push top ray (may be an old one)
-                    ADD_RAY( bounds0 );
+                    // push top ray
+                    ADD_RAY( newRay0 );
 
                     int top = ( outyr0 + 1 ) / 2;
                     int bottom = Mini( ( inyr1 + 1 ) / 2, limitY );
@@ -250,14 +268,14 @@ void RasterizeFOVOctant( int originX, int originY,
                                 ray = c2xy( i2 - 1, y - 1 );
                             }
 
-                            // push any new rays inbetween
+                            // create / push any new rays inbetween
                             ADD_RAY( ray );
                         }
                         prevPixel = pixel;
                     }
 
-                    // push bottm ray (may be an old one)
-                    ADD_RAY( bounds1 );
+                    // push bottom ray
+                    ADD_RAY( newRay1 );
                 }
             }
         }
