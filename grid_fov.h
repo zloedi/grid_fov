@@ -159,23 +159,6 @@ void RasterizeFOVOctant( int originX, int originY,
                 // the Y coordinate of the intersection of the BOTTOM ray with the CURRENT column
                 int outyr1 = ( i2 + 1 ) * ray1.y / ray1.x;
 
-                // == light up a chunk of pixels inside the frustum ==
-
-                {
-                    int starty = ( outyr0 + 1 ) >> 1;
-                    int endy = ( ( outyr1 + 1 ) >> 1 ) - 1;
-
-                    int y;
-                    c2_t p;
-                    int miny = starty;
-                    int maxy = Mini( endy, limitY ); 
-                    c2_t start = c2Add( ci, c2Scale( e1, starty ) );
-                    for ( y = miny, p = start; y <= maxy; 
-                                                    y++, p = c2Add( p, e1 ) ) {
-                        WRITE_PIXEL( p, 255 );
-                    }
-                }
-
                 // == push the rays closer to each other if they hit solid pixels ==
 
                 c2_t newRay0;
@@ -246,6 +229,23 @@ void RasterizeFOVOctant( int originX, int originY,
                             continue;
                         }
                         inyr1 = ( i2 - 1 ) * newRay1.y / newRay1.x;
+                    }
+                }
+
+                // == light up a chunk of pixels inside the frustum ==
+
+                {
+                    int starty = ( outyr0 + 1 ) >> 1;
+                    int endy = ( ( outyr1 + 1 ) >> 1 ) - 1;
+
+                    int y;
+                    c2_t p;
+                    int miny = starty;
+                    int maxy = Mini( endy, limitY ); 
+                    c2_t start = c2Add( ci, c2Scale( e1, starty ) );
+                    for ( y = miny, p = start; y <= maxy; 
+                                                    y++, p = c2Add( p, e1 ) ) {
+                        WRITE_PIXEL( p, 255 );
                     }
                 }
 
