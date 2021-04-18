@@ -1,21 +1,23 @@
-/*
-   What this function does:
-      Rasterizes a single Field Of View octant on a grid, similar to the way 
-      field of view / line of sight / shadowcasting is implemented in some 
-      roguelikes.
-      Uses rays to define visible volumes instead of tracing lines from origin 
-      to pixels.
-      Minimal processing per pixel: each pixel is hit once most of the time.
-      Symmetrical
-      Optional attenuation
-      Optional lit blocking tiles
+// Copyright (c) 2021 Stoiko Todorov
+// This work is licensed under the terms of the MIT license.  
+// For a copy, see https://opensource.org/licenses/MIT.
 
-   To rasterize the entire FOV, call this in a loop with octant in range 0-7
-   Inspired by https://docs.microsoft.com/en-us/archive/blogs/ericlippert/shadowcasting-in-c-part-one
-
-   See the result here: 
-      https://youtu.be/lIlPfwlcbHo
-*/
+//   What this function does:
+//      Rasterizes a single Field Of View octant on a grid, similar to the way 
+//      field of view / line of sight / shadowcasting is implemented in some 
+//      roguelikes.
+//      Uses rays to define visible volumes instead of tracing lines from origin 
+//      to pixels.
+//      Minimal processing per pixel: each pixel is hit once most of the time.
+//      Symmetrical
+//      Optional attenuation
+//      Optional lit blocking tiles
+//
+//   To rasterize the entire FOV, call this in a loop with octant in range 0-7
+//   Inspired by https://docs.microsoft.com/en-us/archive/blogs/ericlippert/shadowcasting-in-c-part-one
+//
+//   See the result here: 
+//      https://youtu.be/lIlPfwlcbHo
 
 static inline int Mini( int a, int b ) {
     return a < b ? a : b;
