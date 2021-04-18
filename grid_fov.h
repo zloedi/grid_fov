@@ -225,7 +225,7 @@ void RasterizeFOVOctant( int originX, int originY,
                         newRay1 = ray1;
                     } 
                     // if blocked, walk along the solid pixels toward the 
-                    // bottom ray until we find a hole, then pin the ray there
+                    // top ray until we find a hole, then pin the ray there
                     else {
                         int top = Mini( ( outyr0 + 1 ) >> 1, limitY );
                         int bottom = iny;
