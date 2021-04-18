@@ -133,7 +133,7 @@ void RasterizeFOVOctant( int originX, int originY,
     limitY = Maxi( limitY, 0 );
 
     {
-        // go over all 'columns'
+        // go through all 'columns'...
         int column;
         c2_t ci;
         for ( column = 0, ci = origin; column <= limitX; 
@@ -210,12 +210,12 @@ void RasterizeFOVOctant( int originX, int originY,
                             WRITE_PIXEL( p, 255 );
                         }
                         newRay0 = c2xy( i2 - 1, y - 1 );
-                        outyr0 = ( i2 + 1 ) * newRay0.y / newRay0.x;
                         // the bounding rays form a zero-area frustum
                         // stop processing this ray pair
                         if ( c2Cross( newRay0, ray1 ) <= 0 ) {
                             continue;
                         }
+                        outyr0 = ( i2 + 1 ) * newRay0.y / newRay0.x;
                     }
                 }
 
@@ -232,7 +232,7 @@ void RasterizeFOVOctant( int originX, int originY,
                     // bottom ray until we find a hole, then pin the ray there
                     else {
                         int top = Mini( ( outyr0 + 1 ) >> 1, limitY );
-                        int bottom = Mini( ( inyr1 + 1 ) >> 1, limitY );
+                        int bottom = iny;
                         int y;
                         c2_t p = c2Add( ci, c2Scale( e1, bottom ) );
                         for ( y = bottom * 2; y >= top * 2; 
@@ -244,12 +244,12 @@ void RasterizeFOVOctant( int originX, int originY,
                             WRITE_PIXEL( p, 255 );
                         }
                         newRay1 = c2xy( i2 + 1, y + 1 );
-                        inyr1 = ( i2 - 1 ) * newRay1.y / newRay1.x;
                         // the bounding rays form a zero-area frustum
                         // stop processing this ray pair
                         if ( c2Cross( newRay0, newRay1 ) <= 0 ) {
                             continue;
                         }
+                        inyr1 = ( i2 - 1 ) * newRay1.y / newRay1.x;
                     }
                 }
 
@@ -259,11 +259,12 @@ void RasterizeFOVOctant( int originX, int originY,
                     // push top ray
                     ADD_RAY( newRay0 );
 
-                    int top = ( outyr0 + 1 ) / 2;
-                    int bottom = Mini( ( inyr1 + 1 ) / 2, limitY );
+                    int top = Mini( ( outyr0 + 1 ) >> 1, limitY );
+                    int bottom = Mini( ( inyr1 + 1 ) >> 1, limitY );
                     c2_t p = c2Add( ci, c2Scale( e1, top ) );
                     int prevPixel = READ_PIXEL( p );
-                    for ( int y = top * 2; y <= bottom * 2; y += 2, p = c2Add( p, e1 ) ) {
+                    for ( int y = top * 2; y <= bottom * 2; 
+                                                y += 2, p = c2Add( p, e1 ) ) {
                         int pixel = READ_PIXEL( p );
                         if ( prevPixel != pixel ) {
                             c2_t ray;
