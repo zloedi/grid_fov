@@ -1,13 +1,13 @@
 /*
    What this function does:
       Rasterizes a single Field Of View octant on a grid, similar to the way 
-      FOV / shadowcasting is implemented in some roguelikes.
-      Uses rays to define visible volumes instead of tracing lines from origin to pixels.
-      Minimal processing per pixel (each pixel is hit only once most of the time).
-      Clips to bitmap
-      Symmetrical / Steps on pixel centers
+      field of view / line of sight / shadowcasting is implemented in some 
+      roguelikes.
+      Uses rays to define visible volumes instead of tracing lines from origin 
+      to pixels.
+      Minimal processing per pixel: each pixel is hit once most of the time.
+      Symmetrical
       Optional attenuation
-      Optional circle clip
       Optional lit blocking tiles
 
    To rasterize the entire FOV, call this in a loop with octant in range 0-7
@@ -29,19 +29,15 @@ static inline int Clampi( int v, int min, int max ) {
     return Maxi( min, Mini( v, max ) );
 }
 
-typedef union c2_s {
-    struct {
-        int x, y;
-    };
-    int a[2];
+typedef struct {
+    int x, y;
 } c2_t;
 
-static const c2_t c2zero = { .a = { 0, 0 } };
-static const c2_t c2one = { .a = { 1, 1 } };
+static const c2_t c2zero = { 0, 0 };
+static const c2_t c2one = { 1, 1 };
 
 static inline c2_t c2xy( int x, int y ) {
-    c2_t c = { { x, y } };
-    return c;
+    return ( c2_t ){ x, y };
 }
 
 static inline c2_t c2Neg( c2_t c ) {
@@ -92,14 +88,14 @@ void RasterizeFOVOctant( int originX, int originY,
     } raysList_t;
     // keep these coupled like this
     static const c2_t bases[] = {
-        { { 1, 0  } }, { { 0, 1  } },
-        { { 1, 0  } }, { { 0, -1 } },
-        { { -1, 0 } }, { { 0, -1 } },
-        { { -1, 0 } }, { { 0, 1  } },
-        { { 0, 1  } }, { { -1, 0 } },
-        { { 0, 1  } }, { { 1, 0  } },
-        { { 0, -1 } }, { { 1, 0  } },
-        { { 0, -1 } }, { { -1, 0 } },
+        { 1, 0 }, { 0, 1 },
+        { 1, 0 }, { 0, -1 },
+        { -1, 0 }, { 0, -1 },
+        { -1, 0 }, { 0, 1 },
+        { 0, 1 }, { -1, 0 },
+        { 0, 1 }, { 1, 0 },
+        { 0, -1 }, { 1, 0 },
+        { 0, -1 }, { -1, 0 },
     }; 
     c2_t e0 = bases[( octant * 2 + 0 ) & 15];
     c2_t e1 = bases[( octant * 2 + 1 ) & 15];
@@ -267,13 +263,7 @@ void RasterizeFOVOctant( int originX, int originY,
                                                 y += 2, p = c2Add( p, e1 ) ) {
                         int pixel = READ_PIXEL( p );
                         if ( prevPixel != pixel ) {
-                            c2_t ray;
-                            if ( pixel ) {
-                                ray = c2xy( i2 + 1, y - 1 );
-                            } else {
-                                ray = c2xy( i2 - 1, y - 1 );
-                            }
-
+                            c2_t ray = c2xy( pixel ? i2 + 1 : i2 - 1 , y - 1 );
                             // create / push any new rays inbetween
                             ADD_RAY( ray );
                         }
@@ -286,6 +276,9 @@ void RasterizeFOVOctant( int originX, int originY,
             }
         }
     }
+
+    // these are hastily implemented as 'post processing' passses
+    // you could hard-code them in place of WRITE_PIXEL in the loops above if needed
 
     if ( ! skipAttenuation ) {
         c2_t ci = origin;
